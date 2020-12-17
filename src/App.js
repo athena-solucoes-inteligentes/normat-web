@@ -7,6 +7,7 @@ import blocksJson from './blocks.json';
 const App = () => {
   const [toolbar] = useState(blocksJson.list);
   const [blockLists, setBlockLists] = useState({});
+  const [trash, setTrash] = useState(false);
 
   const reorder = (list, startIndex, endIndex) => {
     const result = Array.from(list);
@@ -16,17 +17,14 @@ const App = () => {
     return result;
   };
 
+  const onBeforeCapture = () => {
+    setTrash(true);
+  }
+
   const onDragEnd = (result) => {
+    setTrash(false);
     const { source, destination } = result;
-    if (!destination) {
-      if(source.droppableId !== 'toolbar') {
-        setBlockLists({
-          ...blockLists,
-          [source.droppableId]: blockLists[source.droppableId].filter((_, index) => index !== source.index),
-        });
-      }
-      return;
-    }
+    if (!destination) return;
 
     if(source.droppableId === 'toolbar' && destination.droppableId !== source.droppableId) {
       const dest = [
@@ -64,21 +62,30 @@ const App = () => {
   }
 
     return (
-      <DragDropContext onDragEnd={onDragEnd}>
+      <DragDropContext onDragEnd={onDragEnd} onBeforeCapture={onBeforeCapture}>
         <Droppable droppableId="toolbar" direction="horizontal" isDropDisabled>
           {(provided, snapshot) => (
             <div
               ref={provided.innerRef}
               style={{
-                background: snapshot.isDraggingOver ? 'lightgrey' : 'lightgrey',
+                background: 'lightgrey',
                 display: 'flex',
                 padding: 8,
                 overflow: 'auto',
                 borderRadius: '5px',
+                width: 700
               }}
-              {...provided.droppableProps}
             >
-              {toolbar.map((item, index) => <Block key={item.name} id={item.name} name={item.name} content={item.content} index={index} />)}
+              {toolbar.map((item, index) => (
+                <Block
+                  key={item.name}
+                  id={item.name}
+                  name={item.name}
+                  content={item.content}
+                  index={index}
+                  toolbar
+                />
+              ))}
               {provided.placeholder}
             </div>
           )}
@@ -97,7 +104,15 @@ const App = () => {
               {...provided.droppableProps}
             >
               {blockLists["droppable2"] && blockLists["droppable2"].map((item, index) => {
-                return <Block key={item.id} id={item.id} name={item.name} content={item.content} index={index} />
+                return (
+                  <Block
+                    key={item.id}
+                    id={item.id}
+                    name={item.name}
+                    content={item.content}
+                    index={index}
+                  />
+                );
               })}
               {provided.placeholder}
             </div>
@@ -117,12 +132,38 @@ const App = () => {
               {...provided.droppableProps}
             >
               {blockLists["droppable3"] && blockLists["droppable3"].map((item, index) => {
-                return <Block key={item.id} id={item.id} name={item.name} content={item.content} index={index} />
+                return (
+                  <Block
+                    key={item.id}
+                    id={item.id}
+                    name={item.name}
+                    content={item.content}
+                    index={index}
+                  />
+                );
               })}
               {provided.placeholder}
             </div>
           )}
         </Droppable>
+        {trash && <Droppable droppableId="trash" direction="horizontal">
+          {(provided, snapshot) => (
+            <div
+              ref={provided.innerRef}
+              style={{
+                background: snapshot.isDraggingOver ? 'lightgrey' : 'lightgrey',
+                display: 'flex',  
+                padding: 8,
+                overflow: 'auto',
+                borderRadius: '5px',
+              }}
+              {...provided.droppableProps}
+            >
+              {provided.placeholder}
+              <p>Lixo</p>
+            </div>
+          )}
+        </Droppable>}
       </DragDropContext>
     );
 }
