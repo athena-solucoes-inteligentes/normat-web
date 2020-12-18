@@ -10,7 +10,7 @@
 
 .nodrop {
   align-items: center;
-  justify-content: space-around;
+  justify-content: center;
 }
 
 .nodrop div[data-rbd-placeholder-context-id] {
