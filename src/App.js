@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { DragDropContext } from 'react-beautiful-dnd';
 import { v4 as uuid } from 'uuid'
-import Block from './components/Block';
 import Button from './components/Button';
 import Box from './components/Box';
+import List from './components/List';
 import blocksJson from './blocks.json';
 
 const App = () => {
@@ -19,9 +19,7 @@ const App = () => {
     return result;
   };
 
-  const onBeforeCapture = () => {
-    setTrash(true);
-  }
+  const onBeforeCapture = () => setTrash(true);
 
   const onDragEnd = (result) => {
     setTrash(false);
@@ -73,40 +71,21 @@ const App = () => {
     return (
       <DragDropContext onDragEnd={onDragEnd} onBeforeCapture={onBeforeCapture}>
         <Box id="toolbar" disableDrop>
-          {toolbar.map((item, index) => (
-                <Block
-                  key={item.name}
-                  id={item.name}
-                  name={item.name}
-                  group={item.group}
-                  content={item.content}
-                  index={index}
-                  toolbar
-                />
-              ))}
+          <List list={toolbar} toolbar />
         </Box>
-        <Button text="Adicionar Caixa" onClick={addBox} />
-        {Object.keys(blockLists).filter(blockId => blockId !== 'trash').map(blockId => (
-          <Box id={blockId} key={blockId}>
-            {blockLists[blockId].map((item, index) => {
-              return (
-                <Block
-                  key={item.id}
-                  id={item.id}
-                  group={item.group}
-                  name={item.name}
-                  content={item.content}
-                  index={index}
-                />
-              );
-            })}
-          </Box>
-        ))}
-        {trash && (
-          <Box id="trash">
-            <p>Lixo</p>
-          </Box>
-        )}
+        <div style={{ background: '#fff' }}>
+          <Button text="Adicionar Caixa" onClick={addBox} />
+          {Object.keys(blockLists).filter(blockId => blockId !== 'trash').map(blockId => (
+            <Box id={blockId} key={blockId}>
+              <List list={blockLists[blockId]} />
+            </Box>
+          ))}
+          {trash && (
+            <Box id="trash">
+              <p>Lixo</p>
+            </Box>
+          )}
+        </div>
       </DragDropContext>
     );
 }

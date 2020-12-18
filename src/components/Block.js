@@ -18,6 +18,9 @@ const Block = ({ id, name, group, content, index, toolbar }) => {
                             background: groups[group].color,
                             // styles we need to apply on draggables
                             ...provided.draggableProps.style,
+                            transform: toolbar && !snapshot.isDragging
+                                ? 'translate(0px, 0px)'
+                                : provided.draggableProps.style.transform,
                         }}
                     >
                         {content}
