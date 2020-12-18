@@ -1,12 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
-
 * {
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
 }
 
 body, #root {
-    background: #F4F8F9;
-    width: 100vw;
-    height: 100vh;
+  background: #F4F8F9;
+  width: 100vw;
+  height: 100vh;
+  font-family: 'Roboto', sans-serif;
 }
