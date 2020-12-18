@@ -1,6 +1,16 @@
 {
     "list": [
         {
+            "name": "begin",
+            "content": "Início",
+            "group": "boundaries"
+        },
+        {
+            "name": "end",
+            "content": "Final",
+            "group": "boundaries"
+        },
+        {
             "name": "roman",
             "content": "LXVI",
             "group": "simple"
@@ -34,16 +44,6 @@
             "name": "regex",
             "content": "RegEx",
             "group": "advanced"
-        },
-        {
-            "name": "begin",
-            "content": "Início",
-            "group": "boundaries"
-        },
-        {
-            "name": "end",
-            "content": "Final",
-            "group": "boundaries"
         }
     ]
 }

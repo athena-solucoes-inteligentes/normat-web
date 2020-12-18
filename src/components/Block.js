@@ -1,9 +1,10 @@
 import React from 'react';
 import { Draggable } from 'react-beautiful-dnd';
+import groups from '../groups.json';
 
 import classes from './Block.module.css';
 
-const Block = ({ id, name, content, index, toolbar }) => {
+const Block = ({ id, name, group, content, index, toolbar }) => {
     return (
         <Draggable draggableId={id} index={index}>
             {(provided, snapshot) => (
@@ -14,8 +15,7 @@ const Block = ({ id, name, content, index, toolbar }) => {
                         {...provided.dragHandleProps}
                         className={classes.block}
                         style={{
-                            background: snapshot.isDragging ? '#3498db' : '#2980b9',
-
+                            background: groups[group].color,
                             // styles we need to apply on draggables
                             ...provided.draggableProps.style,
                         }}
@@ -23,7 +23,7 @@ const Block = ({ id, name, content, index, toolbar }) => {
                         {content}
                     </div>
                     {toolbar && snapshot.isDragging && (
-                        <div className={classes.block} style={{ background: '#2980b9' }}>
+                        <div className={classes.block} style={{ background: groups[group].color }}>
                             {content}
                         </div>
                     )}

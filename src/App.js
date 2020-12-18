@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { DragDropContext, Droppable } from 'react-beautiful-dnd';
+import { DragDropContext } from 'react-beautiful-dnd';
 import { v4 as uuid } from 'uuid'
 import Block from './components/Block';
+import Button from './components/Button';
+import Box from './components/Box';
 import blocksJson from './blocks.json';
 
 const App = () => {
@@ -61,109 +63,50 @@ const App = () => {
     }
   }
 
+  const addBox = () => {
+    setBlockLists({
+      ...blockLists,
+      [uuid()]: []
+    })
+  }
+
     return (
       <DragDropContext onDragEnd={onDragEnd} onBeforeCapture={onBeforeCapture}>
-        <Droppable droppableId="toolbar" direction="horizontal" isDropDisabled>
-          {(provided, snapshot) => (
-            <div
-              ref={provided.innerRef}
-              style={{
-                background: 'lightgrey',
-                display: 'flex',
-                padding: 8,
-                overflow: 'auto',
-                borderRadius: '5px',
-                width: 700
-              }}
-            >
-              {toolbar.map((item, index) => (
+        <Box id="toolbar" disableDrop>
+          {toolbar.map((item, index) => (
                 <Block
                   key={item.name}
                   id={item.name}
                   name={item.name}
+                  group={item.group}
                   content={item.content}
                   index={index}
                   toolbar
                 />
               ))}
-              {provided.placeholder}
-            </div>
-          )}
-        </Droppable>
-        <Droppable droppableId="droppable2" direction="horizontal">
-          {(provided, snapshot) => (
-            <div
-              ref={provided.innerRef}
-              style={{
-                background: snapshot.isDraggingOver ? 'lightgrey' : 'lightgrey',
-                display: 'flex',  
-                padding: 8,
-                overflow: 'auto',
-                borderRadius: '5px',
-              }}
-              {...provided.droppableProps}
-            >
-              {blockLists["droppable2"] && blockLists["droppable2"].map((item, index) => {
-                return (
-                  <Block
-                    key={item.id}
-                    id={item.id}
-                    name={item.name}
-                    content={item.content}
-                    index={index}
-                  />
-                );
-              })}
-              {provided.placeholder}
-            </div>
-          )}
-        </Droppable>
-        <Droppable droppableId="droppable3" direction="horizontal">
-          {(provided, snapshot) => (
-            <div
-              ref={provided.innerRef}
-              style={{
-                background: snapshot.isDraggingOver ? 'lightgrey' : 'lightgrey',
-                display: 'flex',  
-                padding: 8,
-                overflow: 'auto',
-                borderRadius: '5px',
-              }}
-              {...provided.droppableProps}
-            >
-              {blockLists["droppable3"] && blockLists["droppable3"].map((item, index) => {
-                return (
-                  <Block
-                    key={item.id}
-                    id={item.id}
-                    name={item.name}
-                    content={item.content}
-                    index={index}
-                  />
-                );
-              })}
-              {provided.placeholder}
-            </div>
-          )}
-        </Droppable>
-        {trash && <Droppable droppableId="trash" direction="horizontal">
-          {(provided, snapshot) => (
-            <div
-              ref={provided.innerRef}
-              style={{
-                background: snapshot.isDraggingOver ? 'lightgrey' : 'lightgrey',
-                display: 'flex',  
-                padding: 8,
-                overflow: 'auto',
-                borderRadius: '5px',
-              }}
-              {...provided.droppableProps}
-            >
-              {provided.placeholder}
-              <p>Lixo</p>
-            </div>
-          )}
-        </Droppable>}
+        </Box>
+        <Button text="Adicionar Caixa" onClick={addBox} />
+        {Object.keys(blockLists).filter(blockId => blockId !== 'trash').map(blockId => (
+          <Box id={blockId} key={blockId}>
+            {blockLists[blockId].map((item, index) => {
+              return (
+                <Block
+                  key={item.id}
+                  id={item.id}
+                  group={item.group}
+                  name={item.name}
+                  content={item.content}
+                  index={index}
+                />
+              );
+            })}
+          </Box>
+        ))}
+        {trash && (
+          <Box id="trash">
+            <p>Lixo</p>
+          </Box>
+        )}
       </DragDropContext>
     );
 }
