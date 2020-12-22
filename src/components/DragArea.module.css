@@ -18,3 +18,16 @@
   justify-content: flex-end;
   align-items: center;
 }
+
+.trash {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.hidden {
+  min-height: 0;
+  height: 0;
+  opacity: 0;
+}

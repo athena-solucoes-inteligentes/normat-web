@@ -4,7 +4,7 @@ import Circle from './Circle';
 
 import classes from './Box.module.css';
 
-const Box = ({ id, disableDrop, children, title }) => {
+const Box = ({ id, disableDrop, children, title, customClass }) => {
   return (
     <Droppable droppableId={id} direction="horizontal" isDropDisabled={disableDrop}>
       {(provided, snapshot) => (
@@ -26,10 +26,11 @@ const Box = ({ id, disableDrop, children, title }) => {
             ref={provided.innerRef}
             className={[
               classes.box,
-              disableDrop ? classes.nodrop : ''
+              disableDrop || !title ? classes.nodrop : '',
+              customClass
             ].join(' ')}
             style={{
-              borderRadius: disableDrop && !title ? 10 : null,
+              borderRadius: disableDrop || !title ? 10 : null,
               width: disableDrop ? '100%' : null,
               justifyContent: disableDrop ? 'space-between' : null,
             }}

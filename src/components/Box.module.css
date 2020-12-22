@@ -30,18 +30,20 @@
 }
 
 .dots {
-  min-width: 24;
+  min-width: 24px;
   cursor: pointer;
 }
 
 .box {
   background: #e7eef0;
   display: flex;
+  align-items: center;
   padding: 8px;
   overflow: auto;
   border-radius: 0 0 10px 10px;
   width: 95%;
-  min-height: 60px;
+  min-height: 86px;
+  transition: all 0.2s;
 }
 
 .nodrop {

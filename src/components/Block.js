@@ -1,11 +1,11 @@
 import React, { useRef } from 'react';
 import { Draggable } from 'react-beautiful-dnd';
-import groups from '../constants/groups.json';
 
 import useContextMenu from '../hooks/useContextMenu';
+import ContextMenu from './ContextMenu';
 
 import classes from './Block.module.css';
-import ContextMenu from './ContextMenu';
+import groups from '../constants/groups.json';
 
 const Block = ({ id, name, group, content, index, toolbar }) => {
   const ref = useRef(null);
@@ -26,6 +26,9 @@ const Block = ({ id, name, group, content, index, toolbar }) => {
                 transform: toolbar && !snapshot.isDragging
                   ? 'translate(0px, 0px)'
                   : provided.draggableProps.style.transform,
+                // transition: snapshot.isDropAnimating
+                // ? `all ${snapshot.dropAnimation.curve} 0.001s`
+                // : provided.draggableProps.style.transition
               }}
             >
               {content}
