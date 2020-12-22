@@ -6,6 +6,7 @@ import Box from './Box';
 import Button from './Button';
 import List from './List';
 
+import trashbin from '../assets/trashbin.svg';
 import blocksJson from '../constants/blocks.json';
 import classes from './DragArea.module.css';
 
@@ -72,24 +73,38 @@ const DragArea = () => {
     })
   }
 
+  // const deleteBox = (uuid) => {
+  //   const newList = {...blockLists};
+  //   delete newList[uuid];
+  //   setBlockLists(newList);
+  // }
+
   return (
     <div className={classes.container}>
       <DragDropContext onDragEnd={onDragEnd} onBeforeCapture={onBeforeCapture}>
-        <div className={classes.boxes}>
+        <div className={classes.boxes} style={{ background: 'transparent', width: '100%' }}>
           <Box id="toolbar" disableDrop>
             <List list={toolbar} toolbar />
           </Box>
         </div>
         <div className={classes.boxes} style={{minHeight: '50%' }}>
-          <Button text="Adicionar Caixa" onClick={addBox} />
+          <div className={classes.buttonBox}>
+            <Button text="Adicionar Caixa" onClick={addBox} margin="16px 0 0 0">
+              <svg style={{ marginRight: 4 }} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 5V19" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M5 12H19" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Adicionar Caixa
+            </Button>
+          </div>
           {Object.keys(blockLists).filter(blockId => blockId !== 'trash').map(blockId => (
-            <Box id={blockId} key={blockId}>
+            <Box id={blockId} key={blockId} title="Artigos">
               <List list={blockLists[blockId]} />
             </Box>
           ))}
           {trash && (
             <Box id="trash">
-              <p>Lixo</p>
+              <img src={trashbin} alt="Lixo" />
             </Box>
           )}
         </div>

@@ -1,7 +1,18 @@
 import React from 'react';
 
-const Button = ({ text, onClick }) => {
-  return <button type="button" onClick={onClick}>{text}</button>;
+import classes from './Button.module.css';
+
+const Button = ({ children, onClick, margin }) => {
+  return (
+    <button
+      className={classes.button}
+      style={{ margin }}
+      type="button"
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
 }
 
 export default Button;

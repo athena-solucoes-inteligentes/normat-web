@@ -10,3 +10,11 @@
   justify-content: flex-start;
   align-items: center;
 }
+
+.buttonBox {
+  width: 95%;
+  padding: 8px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}

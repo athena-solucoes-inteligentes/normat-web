@@ -4,7 +4,7 @@ const useContextMenu = (ref) => {
   const [coords, setCoords] = useState({ x: 0, y: 0 })
   const [show, setShow] = useState(false);
 
-  const handleClick = useCallback((e) => {
+  const handleClick = useCallback(() => {
     if(show) setShow(false);
   }, [show]);
 
@@ -19,15 +19,17 @@ const useContextMenu = (ref) => {
 
   useEffect(() => {
     document.addEventListener("mousedown", handleClick);
+    ref.current.addEventListener("click", handleClick);
     ref.current.addEventListener("contextmenu", handleContextMenu);
     const r = ref.current;
     return () => {
       document.removeEventListener("mousedown", handleClick);
+      r.removeEventListener("click", handleClick);
       r.removeEventListener("contextmenu", handleContextMenu);
     };
   }, [ref, handleClick, handleContextMenu]);
 
-  return { x: coords.x, y: coords.y, show };
+  return { x: coords.x, y: coords.y, show, handleClick };
 }
 
 export default useContextMenu;

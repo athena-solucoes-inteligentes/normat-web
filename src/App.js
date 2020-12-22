@@ -1,17 +1,7 @@
 import React from 'react';
 
-import DragArea from './components/DragArea';
-import Text from './components/Text';
+import Routes from './routes';
 
-import classes from './App.module.css';
-
-const App = () => {
-  return (
-    <div className={classes.container}>
-      <DragArea />
-      <Text />
-    </div>
-  );
-}
+const App = () => <Routes />;
 
 export default App;
