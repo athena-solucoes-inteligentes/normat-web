@@ -3,47 +3,59 @@
     {
       "name": "begin",
       "content": "Início",
-      "group": "boundaries"
+      "group": "boundaries",
+      "editable": false
     },
     {
       "name": "end",
       "content": "Final",
-      "group": "boundaries"
+      "group": "boundaries",
+      "editable": false
     },
     {
       "name": "roman",
       "content": "LXVI",
-      "group": "simple"
+      "group": "simple",
+      "editable": false
     },
     {
       "name": "letter",
       "content": "a-z",
-      "group": "simple"
+      "group": "simple",
+      "editable": false
     },
     {
       "name": "decimal",
       "content": "0-9",
-      "group": "simple"
+      "group": "simple",
+      "editable": false
     },
     {
       "name": "any",
       "content": "?",
-      "group": "simple"
+      "group": "simple",
+      "editable": false
     },
     {
       "name": "text",
       "content": "\"abc\"",
-      "group": "user"
+      "group": "user",
+      "editable": true,
+      "message": "Digite o texto a ser buscado."
     },
     {
       "name": "or",
       "content": "x | y",
-      "group": "advanced"
+      "group": "advanced",
+      "editable": true,
+      "message": "Digite os caracteres válidos."
     },
     {
       "name": "regex",
       "content": "RegEx",
-      "group": "advanced"
+      "group": "advanced",
+      "editable": true,
+      "message": "Digite a expressão regular."
     }
   ]
 }

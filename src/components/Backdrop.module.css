@@ -1,7 +1,8 @@
 .container {
   background: #0000004d;
-  width: 100vw;
-  height: 100vh;
+  width: calc(100% + 16px);
+  margin-left: -16px;
+  height: 100%;
   position: absolute;
   z-index: 1000;
   top: 0;

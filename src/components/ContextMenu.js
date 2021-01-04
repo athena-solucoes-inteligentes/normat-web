@@ -10,9 +10,11 @@ const ContextMenu = ({ x, y, show, handleClick, list }) => (
     onContextMenu={(e) => e.preventDefault()}
     onClick={handleClick}
   >
-    {list && list.map((item) => (
-      <li key={item.title} onClick={item.click}>{item.title}</li>
-    ))}
+    {list && list.map((item) => {
+      if(typeof(item.title) !== 'undefined')
+        return <li key={item.title} onClick={item.click}>{item.title}</li>;
+      return null;
+    })}
   </ul>
 );
 

@@ -7,7 +7,7 @@ import ContextMenu from './ContextMenu';
 import classes from './Block.module.css';
 import groups from '../constants/groups.json';
 
-const Block = ({ id, name, group, content, index, toolbar }) => {
+const Block = ({ id, name, editable, edit, boxId, input, group, content, index, toolbar }) => {
   const ref = useRef(null);
   const { x, y, show, handleClick } = useContextMenu(ref);
   return (
@@ -31,7 +31,7 @@ const Block = ({ id, name, group, content, index, toolbar }) => {
                 // : provided.draggableProps.style.transition
               }}
             >
-              {content}
+              {input || content}
             </div>
             {toolbar && snapshot.isDragging && (
               <div className={classes.block} style={{ background: groups[group].color }}>
@@ -42,13 +42,15 @@ const Block = ({ id, name, group, content, index, toolbar }) => {
           )}
       </Draggable>
       {!toolbar && <ContextMenu x={x} y={y} show={show} handleClick={handleClick} list={[
-        {
+        editable && {
           title: 'Editar',
-          click: () => console.log('teste'),
+          click: () => edit(boxId, index, true),
         },
         {
           title: 'Copiar',
-          click: () => console.log('teste'),
+          click: () => {
+            navigator.clipboard.writeText(JSON.stringify({name, input}));
+          },
         },
         {
           title: 'Deletar',

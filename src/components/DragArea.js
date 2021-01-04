@@ -11,16 +11,21 @@ import blocksJson from '../constants/blocks.json';
 import classes from './DragArea.module.css';
 
 const DragArea = () => {
-
-  const [toolbar] = useState(blocksJson.list);
   const [blockLists, setBlockLists] = useState({
     trash: {
       list: []
     }
   });
   const [trash, setTrash] = useState(false);
-  const [modal, setModal] = useState(false);
-  const [boxTitle, setBoxTitle] = useState('');
+  const [modal, setModal] = useState({
+    box: false,
+    block: {
+      show: false,
+      box: '',
+      index: -1
+    },
+  });
+  const [modalInfo, setModalInfo] = useState('');
 
   const reorder = (list, startIndex, endIndex) => {
     const result = Array.from(list);
@@ -30,7 +35,11 @@ const DragArea = () => {
     return result;
   };
 
-  const onBeforeCapture = () => setTrash(true);
+  const onBeforeCapture = () => {
+    const { box, index, show } = modal.block;
+    if(show) toggleBlockModal(box, index);
+    setTrash(true);
+  }
 
   const onDragEnd = (result) => {
     setTrash(false);
@@ -38,11 +47,12 @@ const DragArea = () => {
     if (!destination) return;
 
     if (source.droppableId === 'toolbar' && destination.droppableId !== source.droppableId) {
+      const id = `${blocksJson.list[source.index].name}-${uuid()}`;
       const dest = [
         ...blockLists[destination.droppableId].list,
         {
-          ...toolbar[source.index],
-          id: `${toolbar[source.index].name}-${uuid()}`
+          ...blocksJson.list[source.index],
+          id
         }
       ];
       setBlockLists({
@@ -52,6 +62,8 @@ const DragArea = () => {
           list: reorder(dest, dest.length - 1, destination.index)
         },
       });
+      if(blocksJson.list[source.index].editable && destination.droppableId !== 'trash')
+        toggleBlockModal(destination.droppableId, destination.index);
     } else if (destination.droppableId === 'toolbar' && destination.droppableId !== source.droppableId) {
       setBlockLists({
         ...blockLists,
@@ -87,63 +99,105 @@ const DragArea = () => {
     }
   }
 
-  const addBox = (title) => {
-    toggleModal();
-    setBlockLists({
-      ...blockLists,
-      [uuid()]: {
-        title,
-        list: []
-      }
-    })
-  }
-
   // const deleteBox = (uuid) => {
   //   const newList = {...blockLists};
   //   delete newList[uuid];
   //   setBlockLists(newList);
   // }
 
-  const toggleModal = () => {
-    setBoxTitle('');
-    setModal(!modal);
+  const toggleBoxModal = () => {
+    setModalInfo('');
+    setModal({
+      ...modal,
+      box: !modal.box
+    });
   }
 
-  const handleFormSubmit = (e) => {
+  const toggleBlockModal = (box, index, confirm) => {
+    if(modal.block.show && !confirm && typeof(blockLists[box].list[index].input) === 'undefined') {
+      setBlockLists({
+        ...blockLists,
+        [box]: {
+          ...blockLists[box],
+          list: blockLists[box].list.filter((_, i) => i !== index)
+        }
+      });
+    }
+    setModalInfo('');
+    setModal((prevState) => ({
+      ...modal,
+      block: {
+        show: !prevState.block.show,
+        box,
+        index
+      }
+    }));
+  }
+
+  const addBox = (e) => {
     e.preventDefault();
-    if(boxTitle === '') return;
-    addBox(boxTitle)
+    if(modalInfo === '') return;
+    toggleBoxModal();
+    setBlockLists({
+      ...blockLists,
+      [uuid()]: {
+        title: modalInfo,
+        list: []
+      }
+    });
+  }
+
+  const editBlock = (e) => {
+    e.preventDefault();
+    if(modalInfo === '') return;
+    const { box, index } = modal.block
+    setBlockLists({
+      ...blockLists,
+      [box]: {
+        ...blockLists[box],
+        list: blockLists[box].list.map((b, i) => i === index ? { ...b, input: modalInfo, edit: toggleBlockModal } : b)
+      }
+    });
+    toggleBlockModal(box, index, true);
   }
 
   return (
     <div className={classes.container}>
-      {modal && (
-        <Modal closeModal={toggleModal}>
-          <form onSubmit={handleFormSubmit} >
-            <input type="text" value={boxTitle} onChange={(e) => setBoxTitle(e.target.value)} />
-            <Button type="submit">Salvar</Button>
+      {modal.box && (
+        <Modal closeModal={toggleBoxModal} title="Adicionar caixa">
+          <form onSubmit={addBox}>
+            <input type="text" value={modalInfo} onChange={(e) => setModalInfo(e.target.value)} />
+            <Button type="submit">Adicionar</Button>
+          </form>
+        </Modal>
+      )}
+      {modal.block.show && (
+        <Modal closeModal={() => toggleBlockModal(modal.block.box, modal.block.index)} title="Adicionar bloco">
+          <form onSubmit={editBlock}>
+            <input type="text" value={modalInfo} onChange={(e) => setModalInfo(e.target.value)} />
+            <Button type="submit">Adicionar</Button>
           </form>
         </Modal>
       )}
       <DragDropContext onDragEnd={onDragEnd} onBeforeCapture={onBeforeCapture}>
         <div className={classes.boxes} style={{ background: 'transparent', width: '100%' }}>
           <Box id="toolbar" disableDrop>
-            <List list={toolbar} toolbar />
+            <List list={blocksJson.list} toolbar />
           </Box>
         </div>
         <div className={classes.boxes} style={{ minHeight: '50%' }}>
           <div className={classes.buttonBox}>
-            <Button onClick={toggleModal} margin="16px 0 0 0">
+            <Button onClick={toggleBoxModal} margin="16px 0 0 0">
               <svg style={{ marginRight: 4 }} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M12 5V19" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M5 12H19" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              Adicionar Caixa
+              Adicionar caixa
             </Button>
           </div>
           {Object.keys(blockLists).filter(blockId => blockId !== 'trash').map(blockId => (
             <Box id={blockId} key={blockId} title={blockLists[blockId].title}>
-              <List list={blockLists[blockId].list} />
+              <List list={blockLists[blockId].list} boxId={blockId} />
             </Box>
           ))}
           <Box id="trash" customClass={!trash ? classes.hidden : null}>

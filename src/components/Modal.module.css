@@ -2,4 +2,6 @@
   background: #fff;
   position: absolute;
   z-index: 1001;
+  left: 40%;
+  top: 30%;
 }

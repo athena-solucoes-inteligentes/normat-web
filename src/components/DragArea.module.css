@@ -1,6 +1,7 @@
 .container {
   width: 60%;
   height: 100%;
+  position: relative;
 }
 
 .boxes {
