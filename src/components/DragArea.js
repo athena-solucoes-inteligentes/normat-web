@@ -47,11 +47,11 @@ const DragArea = () => {
     if (!destination) return;
 
     if (source.droppableId === 'toolbar' && destination.droppableId !== source.droppableId) {
-      const id = `${blocksJson.list[source.index].name}-${uuid()}`;
+      const id = `${blocksJson[source.index].name}-${uuid()}`;
       const dest = [
         ...blockLists[destination.droppableId].list,
         {
-          ...blocksJson.list[source.index],
+          ...blocksJson[source.index],
           id
         }
       ];
@@ -62,7 +62,7 @@ const DragArea = () => {
           list: reorder(dest, dest.length - 1, destination.index)
         },
       });
-      if(blocksJson.list[source.index].editable && destination.droppableId !== 'trash')
+      if(blocksJson[source.index].editable && destination.droppableId !== 'trash')
         toggleBlockModal(destination.droppableId, destination.index);
     } else if (destination.droppableId === 'toolbar' && destination.droppableId !== source.droppableId) {
       setBlockLists({
@@ -134,6 +134,32 @@ const DragArea = () => {
     }));
   }
 
+  const pasteBlocks = async (boxId) => {
+    try {
+      const clipboard = JSON.parse(await navigator.clipboard.readText());
+      const list = [...blockLists[boxId].list];
+      clipboard.forEach((c) => {
+        const block = blocksJson.filter(b => b.name === c.name);
+        if(!block.length) return;
+        list.push({
+          id: `${c.name}-${uuid()}`,
+          name: c.name,
+          input: block[0].editable ? c.input : undefined,
+          ...block[0],
+        });
+      });
+    setBlockLists({
+      ...blockLists,
+      [boxId]: {
+        ...blockLists[boxId],
+        list,
+      },
+    })
+    } catch(e) {
+      alert('Erro ao copiar bloco(s)!');
+    }
+  }
+
   const addBox = (e) => {
     e.preventDefault();
     if(modalInfo === '') return;
@@ -182,7 +208,7 @@ const DragArea = () => {
       <DragDropContext onDragEnd={onDragEnd} onBeforeCapture={onBeforeCapture}>
         <div className={classes.boxes} style={{ background: 'transparent', width: '100%' }}>
           <Box id="toolbar" disableDrop>
-            <List list={blocksJson.list} toolbar />
+            <List list={blocksJson} toolbar />
           </Box>
         </div>
         <div className={classes.boxes} style={{ minHeight: '50%' }}>
@@ -196,7 +222,7 @@ const DragArea = () => {
             </Button>
           </div>
           {Object.keys(blockLists).filter(blockId => blockId !== 'trash').map(blockId => (
-            <Box id={blockId} key={blockId} title={blockLists[blockId].title}>
+            <Box id={blockId} key={blockId} title={blockLists[blockId].title} pasteBlocks={pasteBlocks}>
               <List list={blockLists[blockId].list} boxId={blockId} />
             </Box>
           ))}

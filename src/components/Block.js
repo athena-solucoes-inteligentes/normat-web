@@ -31,7 +31,7 @@ const Block = ({ id, name, editable, edit, boxId, input, group, content, index, 
                 // : provided.draggableProps.style.transition
               }}
             >
-              {input || content}
+              {(editable && input) || content}
             </div>
             {toolbar && snapshot.isDragging && (
               <div className={classes.block} style={{ background: groups[group].color }}>
@@ -49,7 +49,7 @@ const Block = ({ id, name, editable, edit, boxId, input, group, content, index, 
         {
           title: 'Copiar',
           click: () => {
-            navigator.clipboard.writeText(JSON.stringify({name, input}));
+            navigator.clipboard.writeText(JSON.stringify([{name, input}]));
           },
         },
         {
