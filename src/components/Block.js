@@ -7,7 +7,7 @@ import ContextMenu from './ContextMenu';
 import classes from './Block.module.css';
 import groups from '../constants/groups.json';
 
-const Block = ({ id, name, editable, edit, boxId, input, group, content, index, toolbar }) => {
+const Block = ({ id, name, editable, edit, boxId, input, group, content, index, toolbar, deleteBlock }) => {
   const ref = useRef(null);
   const { x, y, show, handleClick } = useContextMenu(ref);
   return (
@@ -49,12 +49,12 @@ const Block = ({ id, name, editable, edit, boxId, input, group, content, index, 
         {
           title: 'Copiar',
           click: () => {
-            navigator.clipboard.writeText(JSON.stringify([{name, input}]));
+            navigator.clipboard.writeText(JSON.stringify({blocks:[{name, input}]}));
           },
         },
         {
           title: 'Deletar',
-          click: () => console.log('teste'),
+          click: () => deleteBlock(boxId, index),
         },
       ]}/>}
     </>

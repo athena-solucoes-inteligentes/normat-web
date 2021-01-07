@@ -7,7 +7,7 @@ import ContextMenu from './ContextMenu';
 
 import classes from './Box.module.css';
 
-const Box = ({ id, disableDrop, children, title, customClass, pasteBlocks }) => {
+const Box = ({ id, list, disableDrop, children, title, customClass, pasteBlocks, clearBox, deleteBox }) => {
   const ref = useRef(null);
   const dotRef = useRef(null);
   const { x, y, show, manual, handleClick, showContextMenu } = useContextMenu(ref);
@@ -18,7 +18,7 @@ const Box = ({ id, disableDrop, children, title, customClass, pasteBlocks }) => 
 
   return (
     <>
-      <Droppable droppableId={id} direction="horizontal" isDropDisabled={disableDrop}>
+      <Droppable droppableId={id} direction="horizontal" isDropDisabled={disableDrop} type="BLOCK">
         {(provided, snapshot) => (
           <div className={classes.container} style={{padding: disableDrop ? '8px 0' : null}}>
             {!disableDrop && title && (
@@ -45,7 +45,7 @@ const Box = ({ id, disableDrop, children, title, customClass, pasteBlocks }) => 
                 style={{
                   borderRadius: disableDrop || !title ? 10 : null,
                   width: disableDrop ? '100%' : null,
-                  justifyContent: disableDrop ? 'space-between' : null,
+                  justifyContent: disableDrop ? 'center' : null,
                 }}
               >
                 {children}
@@ -61,13 +61,28 @@ const Box = ({ id, disableDrop, children, title, customClass, pasteBlocks }) => 
             title: 'Renomear',
             click: () => pasteBlocks(id),
           },
+          manual && {
+            title: 'Copiar',
+            click: () => {
+              if(typeof(list) === 'undefined') return;
+              const clipboard = {
+                title,
+                blocks: list.map(b => ({name: b.name, input: b.input}))
+              };
+              navigator.clipboard.writeText(JSON.stringify(clipboard));
+            },
+          },
           {
             title: 'Colar bloco(s)',
             click: () => pasteBlocks(id),
           },
           manual && {
+            title: 'Limpar',
+            click: () => clearBox(id),
+          },
+          manual && {
             title: 'Deletar',
-            click: () => pasteBlocks(id),
+            click: () => deleteBox(id),
           },
         ]}/>
       )}
