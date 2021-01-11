@@ -7,7 +7,7 @@ import ContextMenu from './ContextMenu';
 
 import classes from './Box.module.css';
 
-const Box = ({ id, list, disableDrop, children, title, customClass, pasteBlocks, clearBox, deleteBox }) => {
+const Box = ({ id, list, disableDrop, children, title, customClass, pasteBlocks, clearBox, deleteBox, dragHandleProps }) => {
   const ref = useRef(null);
   const dotRef = useRef(null);
   const { x, y, show, manual, handleClick, showContextMenu } = useContextMenu(ref);
@@ -20,9 +20,9 @@ const Box = ({ id, list, disableDrop, children, title, customClass, pasteBlocks,
     <>
       <Droppable droppableId={id} direction="horizontal" isDropDisabled={disableDrop} type="BLOCK">
         {(provided, snapshot) => (
-          <div className={classes.container} style={{padding: disableDrop ? '8px 0' : null}}>
+          <div className={classes.container} style={{padding: disableDrop ? '8px 0' : null}} >
             {!disableDrop && title && (
-              <div className={classes.title}>
+              <div className={classes.title} {...dragHandleProps}>
                 <div>
                   <Circle size={16} color="#fff" margin="0 5px" />
                 </div>

@@ -35,68 +35,87 @@ const DragArea = () => {
     return result;
   };
 
-  const onBeforeCapture = () => {
+  const onBeforeCapture = (before) => {
     const { box, index, show } = modal.block;
     if(show) toggleBlockModal(box, index);
-    setTrash(true);
+    if(typeof(blockLists[before.draggableId]) === 'undefined') setTrash(true);
+  }
+
+  const putKeyAfter = (object, key1, key2) => {
+    const res = {};
+    let prev = undefined;
+    for(let i of Object.keys(object)) {
+      if(key2 === prev) res[key1] = object[key1];
+      if(i !== key1) res[i] = object[i];
+      prev = i;
+    }
+    if(key2 === prev) res[key1] = object[key1];
+    return res;
   }
 
   const onDragEnd = (result) => {
     setTrash(false);
     const { source, destination, type } = result;
-    if(type === 'BOX') return;
     if (!destination) return;
+    switch(type) {
+      case 'BOX':
+        const boxKeys = Object.keys(blockLists).filter(c => c !== 'trash');
+        setBlockLists({
+          trash: {
+            list: []
+          },
+          ...putKeyAfter(blockLists, boxKeys[source.index], boxKeys[source.index < destination.index ? destination.index : destination.index - 1])
+        });
+      break;
 
-    if (source.droppableId === 'toolbar' && destination.droppableId !== source.droppableId) {
-      const id = `${blocksJson[source.index].name}-${uuid()}`;
-      const dest = [
-        ...blockLists[destination.droppableId].list,
-        {
-          ...blocksJson[source.index],
-          id
+      case 'BLOCK':
+        if (source.droppableId === 'toolbar' && destination.droppableId !== source.droppableId) {
+          const id = `${blocksJson[source.index].name}-${uuid()}`;
+          const dest = [
+            ...blockLists[destination.droppableId].list,
+            {
+              ...blocksJson[source.index],
+              id
+            }
+          ];
+          setBlockLists({
+            ...blockLists,
+            [destination.droppableId]: {
+              ...blockLists[destination.droppableId],
+              list: reorder(dest, dest.length - 1, destination.index)
+            },
+          });
+          if(blocksJson[source.index].editable && destination.droppableId !== 'trash')
+            toggleBlockModal(destination.droppableId, destination.index);
+        } else if (source.droppableId !== 'toolbar' && destination.droppableId === source.droppableId) {
+          setBlockLists({
+            ...blockLists,
+            [destination.droppableId]: {
+              ...blockLists[destination.droppableId],
+              list: reorder(blockLists[destination.droppableId].list, source.index, destination.index),
+            },
+          });
+        } else if (source.droppableId !== 'toolbar' && destination.droppableId !== 'toolbar' && destination.droppableId !== source.droppableId) {
+          const dest = [
+            ...blockLists[destination.droppableId].list,
+            blockLists[source.droppableId].list[source.index],
+          ];
+          setBlockLists({
+            ...blockLists,
+            [destination.droppableId]: {
+              ...blockLists[destination.droppableId],
+              list: reorder(dest, dest.length - 1, destination.index),
+            },
+            [source.droppableId]: {
+              ...blockLists[source.droppableId],
+              list: blockLists[source.droppableId].list.filter((_, index) => index !== source.index),
+            },
+          });
         }
-      ];
-      setBlockLists({
-        ...blockLists,
-        [destination.droppableId]: {
-          ...blockLists[destination.droppableId],
-          list: reorder(dest, dest.length - 1, destination.index)
-        },
-      });
-      if(blocksJson[source.index].editable && destination.droppableId !== 'trash')
-        toggleBlockModal(destination.droppableId, destination.index);
-    } else if (destination.droppableId === 'toolbar' && destination.droppableId !== source.droppableId) {
-      setBlockLists({
-        ...blockLists,
-        [source.droppableId]: {
-          ...blockLists[source.droppableId],
-          list: blockLists[source.droppableId].list.filter((_, index) => index !== source.index),
-        },
-      });
-    } else if (source.droppableId !== 'toolbar' && destination.droppableId === source.droppableId) {
-      setBlockLists({
-        ...blockLists,
-        [destination.droppableId]: {
-          ...blockLists[destination.droppableId],
-          list: reorder(blockLists[destination.droppableId].list, source.index, destination.index),
-        },
-      });
-    } else if (source.droppableId !== 'toolbar' && destination.droppableId !== 'toolbar' && destination.droppableId !== source.droppableId) {
-      const dest = [
-        ...blockLists[destination.droppableId].list,
-        blockLists[source.droppableId].list[source.index],
-      ];
-      setBlockLists({
-        ...blockLists,
-        [destination.droppableId]: {
-          ...blockLists[destination.droppableId],
-          list: reorder(dest, dest.length - 1, destination.index),
-        },
-        [source.droppableId]: {
-          ...blockLists[source.droppableId],
-          list: blockLists[source.droppableId].list.filter((_, index) => index !== source.index),
-        },
-      });
+      break;
+
+      default:
+      break;
     }
   }
 
@@ -256,12 +275,11 @@ const DragArea = () => {
                 <div style={{ width: '100%' }}>
                     <div ref={provided.innerRef} >
                         {Object.keys(blockLists).filter(blockId => blockId !== 'trash').map((blockId, i) => (
-                          <Draggable draggableId={blockId} index={i}>
+                          <Draggable draggableId={blockId} index={i} key={blockId}>
                             {(provided, snapshot) => (
                                 <div
                                   ref={provided.innerRef}
                                   {...provided.draggableProps}
-                                  {...provided.dragHandleProps}
                                   className={classes.block}
                                 >
                                   <Box
@@ -272,6 +290,7 @@ const DragArea = () => {
                                     deleteBox={deleteBox}
                                     clearBox={clearBox}
                                     list={blockLists[blockId].list}
+                                    dragHandleProps={provided.dragHandleProps}
                                   >
                                     <List list={blockLists[blockId].list} boxId={blockId} deleteBlock={deleteBlock} />
                                   </Box>
