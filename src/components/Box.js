@@ -7,7 +7,7 @@ import ContextMenu from './ContextMenu';
 
 import classes from './Box.module.css';
 
-const Box = ({ id, list, disableDrop, children, title, customClass, pasteBlocks, clearBox, deleteBox, dragHandleProps }) => {
+const Box = ({ id, list, disableDrop, children, title, customClass, pasteBlocks, clearBox, deleteBox, dragHandleProps, boxes }) => {
   const ref = useRef(null);
   const dotRef = useRef(null);
   const { x, y, show, manual, handleClick, showContextMenu } = useContextMenu(ref);
@@ -55,6 +55,29 @@ const Box = ({ id, list, disableDrop, children, title, customClass, pasteBlocks,
           </div>
         )}
       </Droppable>
+      {id !== 'toolbar' && id !== 'trash' && (
+        <Droppable droppableId={`${id};${title}`} direction="horizontal" type="BOX">
+          {(provided, snapshot) => (
+            <div style={{ width: '100%', height: 100, border: '1px solid black' }}>
+              <div ref={provided.innerRef}>
+                {Object.keys(boxes).map(boxId => (
+                  <Box
+                    id={boxId}
+                    key={boxId}
+                    title={boxes[boxId].title}
+                    boxes={boxes[boxId].children}
+                    pasteBlocks={pasteBlocks}
+                    deleteBox={deleteBox}
+                    clearBox={clearBox}
+                    list={boxes[boxId].list}
+                  />
+                ))}
+                {provided.placeholder}
+              </div>
+            </div>
+          )}
+        </Droppable>
+      )}
       {id !== 'toolbar' && id !== 'trash' && (
         <ContextMenu x={x} y={y} show={show} handleClick={handleClick} list={[
           manual && {
