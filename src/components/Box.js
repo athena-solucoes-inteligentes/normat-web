@@ -1,13 +1,27 @@
 import React, { useRef } from 'react';
-import { Droppable } from 'react-beautiful-dnd';
-import Circle from './Circle';
+import { Droppable, Draggable } from 'react-beautiful-dnd';
 
+import Circle from './Circle';
+import List from './List'
 import useContextMenu from '../hooks/useContextMenu';
 import ContextMenu from './ContextMenu';
 
 import classes from './Box.module.css';
 
-const Box = ({ id, list, disableDrop, children, title, customClass, pasteBlocks, clearBox, deleteBox, dragHandleProps, boxes }) => {
+const Box = ({
+  id,
+  list,
+  disableDrop,
+  children,
+  title,
+  customClass,
+  pasteBlocks,
+  clearBox,
+  deleteBox,
+  dragHandleProps,
+  boxList,
+  deleteBlock
+}) => {
   const ref = useRef(null);
   const dotRef = useRef(null);
   const { x, y, show, manual, handleClick, showContextMenu } = useContextMenu(ref);
@@ -55,25 +69,38 @@ const Box = ({ id, list, disableDrop, children, title, customClass, pasteBlocks,
           </div>
         )}
       </Droppable>
-      {id !== 'toolbar' && id !== 'trash' && (
-        <Droppable droppableId={`${id};${title}`} direction="horizontal" type="BOX">
+      {id !== 'toolbar' && id !== 'trash' && Object.keys(boxList).length > 0 && (
+        <Droppable droppableId={`${id};${title}`} direction="vertical" type="BOX">
           {(provided, snapshot) => (
-            <div style={{ width: '100%', height: 100, border: '1px solid black' }}>
-              <div ref={provided.innerRef}>
-                {Object.keys(boxes).map(boxId => (
-                  <Box
-                    id={boxId}
-                    key={boxId}
-                    title={boxes[boxId].title}
-                    boxes={boxes[boxId].children}
-                    pasteBlocks={pasteBlocks}
-                    deleteBox={deleteBox}
-                    clearBox={clearBox}
-                    list={boxes[boxId].list}
-                  />
-                ))}
-                {provided.placeholder}
-              </div>
+            <div
+              style={{ width: '100%', border: '1px solid black' }}
+              ref={provided.innerRef}
+            >
+              {Object.keys(boxList).map((boxId, i) => (
+                  <Draggable draggableId={boxId} index={i} key={boxId}>
+                    {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          style={{ width: '100%' }}
+                        >
+                          <Box
+                            id={boxId}
+                            title={boxList[boxId].title}
+                            boxList={boxList[boxId].children || {}}
+                            pasteBlocks={pasteBlocks}
+                            deleteBox={deleteBox}
+                            clearBox={clearBox}
+                            list={boxList[boxId].list}
+                            dragHandleProps={provided.dragHandleProps}
+                          >
+                            <List list={boxList[boxId].list} boxId={boxId} deleteBlock={deleteBlock} />
+                          </Box>
+                        </div>
+                    )}
+                  </Draggable>
+              ))}
+              {provided.placeholder}
             </div>
           )}
         </Droppable>

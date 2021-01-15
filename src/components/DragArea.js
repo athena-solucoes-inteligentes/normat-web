@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { v4 as uuid } from 'uuid'
 
@@ -11,11 +11,8 @@ import blocksJson from '../constants/blocks.json';
 import classes from './DragArea.module.css';
 
 const DragArea = () => {
-  const [blockLists, setBlockLists] = useState({
-    trash: {
-      list: []
-    }
-  });
+  const [boxList, setBoxList] = useState({});
+  const [organizedBoxList, setOrganizedBoxList] = useState({});
   const [trash, setTrash] = useState(false);
   const [modal, setModal] = useState({
     box: false,
@@ -35,12 +32,6 @@ const DragArea = () => {
     return result;
   };
 
-  const onBeforeCapture = (before) => {
-    const { box, index, show } = modal.block;
-    if(show) toggleBlockModal(box, index);
-    if(typeof(blockLists[before.draggableId]) === 'undefined') setTrash(true);
-  }
-
   const putKeyAfter = (object, key1, key2) => {
     const res = {};
     let prev = undefined;
@@ -53,41 +44,93 @@ const DragArea = () => {
     return res;
   }
 
+  const organizeBoxes = useCallback(() => {
+    const output = {};
+    Object.keys(boxList).forEach(boxKey => {
+      let parent = output;
+      if(Array.isArray(boxList[boxKey].parent)) {
+        boxList[boxKey].parent.forEach((p, i) => {
+          if(i === 0) {
+            parent[p] = parent[p] || {};
+            parent = parent[p];
+          } else {
+            parent.children = parent.children || {};
+            parent.children[p] = parent.children[p] || {};
+            parent = parent.children[p];
+          }
+        });
+        parent.children = {...parent.children, [boxKey]: {...boxList[boxKey]}};
+      } else {
+        parent[boxKey] = {...boxList[boxKey]};
+        parent = parent[boxKey];
+      }
+    });
+    setOrganizedBoxList(output)
+  }, [boxList]);
+
+  const getOrganizedBox = useCallback(boxKey => {
+    let parent = organizedBoxList;
+    if(Array.isArray(boxList[boxKey].parent))
+      boxList[boxKey].parent.forEach(parentKey => {
+        if(typeof(parent[parentKey]) === 'undefined') return;
+        parent = parent[parentKey];
+      });
+    return {...parent[boxKey]};
+  }, [boxList, organizedBoxList]);
+
+  const propagateParent = (list, parent, children) => {
+    if(!children) return;
+    Object.keys(children).forEach(childKey => {
+      list[childKey].parent = [...list[parent].parent, parent];
+      propagateParent(list, childKey, children[childKey].children);
+    });
+  }
+
+  useEffect(() => organizeBoxes(), [organizeBoxes]);
+  console.log('organized', organizedBoxList);
+  console.log('boxList', boxList);
+  const onBeforeCapture = (before) => {
+    const { box, index, show } = modal.block;
+    if(show) toggleBlockModal(box, index);
+    if(typeof(boxList[before.draggableId]) === 'undefined') setTrash(true);
+  }
   const onDragEnd = (result) => {
     setTrash(false);
-    const { source, destination, type } = result;
-    if (!destination) return;
+    const { source, destination, combine, type } = result;
+    console.log('result', result);
+    if (!destination && !combine) return;
     switch(type) {
       case 'BOX':
-        console.log(blockLists);
+        if(!destination && combine) {
+          const boxKey = Object.keys(organizedBoxList)[source.index];
+          const newParentBoxKey = combine.draggableId;
+          let output = {...boxList};
+          const box = getOrganizedBox(boxKey);
+          output[boxKey] = {
+            ...output[boxKey],
+              parent: Array.isArray(output[newParentBoxKey].parent)
+                ? [...output[newParentBoxKey].parent, newParentBoxKey]
+                : [newParentBoxKey],
+          }
+          propagateParent(output, boxKey, box.children);
+          return setBoxList(output);
+        }
         if(source.droppableId === destination.droppableId) {
           if(source.droppableId === 'BOXES') {
-            const boxKeys = Object.keys(blockLists).filter(c => c !== 'trash');
-            setBlockLists({
-              trash: {
-                list: []
-              },
-              ...putKeyAfter(blockLists, boxKeys[source.index], boxKeys[source.index < destination.index ? destination.index : destination.index - 1])
-            });
+            const boxKeys = Object.keys(boxList);
+            setBoxList(putKeyAfter(boxList, boxKeys[source.index], boxKeys[source.index < destination.index ? destination.index : destination.index - 1]));
           } else {
 
           }
         } else {
           if(source.droppableId === 'BOXES') {
-            const boxes = {...blockLists};
-            const boxKey = (Object.keys(boxes).filter(c => c !== 'trash'))[source.index];
-            const box = boxes[boxKey];
-            delete boxes[boxKey];
-            const parentId = destination.droppableId.split(';')[0];
-            const children = {...boxes[parentId].children, [boxKey]: box};
-            setBlockLists({
-              trash: {
-                list: []
-              },
-              ...boxes,
-              [parentId]: {
-                ...boxes[parentId],
-                children: putKeyAfter(children, children.length - 1, destination.index)
+            const boxKey = Object.keys(boxList)[source.index];
+            const newParentBoxKey = destination.droppableId.split(';')[0];
+            setBoxList({
+              ...boxList,
+              [boxKey]: {
+                ...boxList[boxKey],
+                parent: Array.isArray(boxList[boxKey].parent) ? [...boxList[boxKey].parent, newParentBoxKey] : [newParentBoxKey]
               }
             });
           }
@@ -97,45 +140,54 @@ const DragArea = () => {
 
       case 'BLOCK':
         if (source.droppableId === 'toolbar' && destination.droppableId !== source.droppableId) {
+          if(destination.droppableId === 'trash') return;
           const id = `${blocksJson[source.index].name}-${uuid()}`;
           const dest = [
-            ...blockLists[destination.droppableId].list,
+            ...boxList[destination.droppableId].list,
             {
               ...blocksJson[source.index],
               id
             }
           ];
-          setBlockLists({
-            ...blockLists,
+          setBoxList({
+            ...boxList,
             [destination.droppableId]: {
-              ...blockLists[destination.droppableId],
+              ...boxList[destination.droppableId],
               list: reorder(dest, dest.length - 1, destination.index)
             },
           });
           if(blocksJson[source.index].editable && destination.droppableId !== 'trash')
             toggleBlockModal(destination.droppableId, destination.index);
         } else if (source.droppableId !== 'toolbar' && destination.droppableId === source.droppableId) {
-          setBlockLists({
-            ...blockLists,
+          setBoxList({
+            ...boxList,
             [destination.droppableId]: {
-              ...blockLists[destination.droppableId],
-              list: reorder(blockLists[destination.droppableId].list, source.index, destination.index),
+              ...boxList[destination.droppableId],
+              list: reorder(boxList[destination.droppableId].list, source.index, destination.index),
             },
           });
         } else if (source.droppableId !== 'toolbar' && destination.droppableId !== 'toolbar' && destination.droppableId !== source.droppableId) {
+          if(destination.droppableId === 'trash')
+            return setBoxList({
+              ...boxList,
+              [source.droppableId]: {
+                ...boxList[source.droppableId],
+                list: boxList[source.droppableId].list.filter((_, index) => index !== source.index),
+              },
+            });
           const dest = [
-            ...blockLists[destination.droppableId].list,
-            blockLists[source.droppableId].list[source.index],
+            ...boxList[destination.droppableId].list,
+            boxList[source.droppableId].list[source.index],
           ];
-          setBlockLists({
-            ...blockLists,
+          setBoxList({
+            ...boxList,
             [destination.droppableId]: {
-              ...blockLists[destination.droppableId],
+              ...boxList[destination.droppableId],
               list: reorder(dest, dest.length - 1, destination.index),
             },
             [source.droppableId]: {
-              ...blockLists[source.droppableId],
-              list: blockLists[source.droppableId].list.filter((_, index) => index !== source.index),
+              ...boxList[source.droppableId],
+              list: boxList[source.droppableId].list.filter((_, index) => index !== source.index),
             },
           });
         }
@@ -146,12 +198,6 @@ const DragArea = () => {
     }
   }
 
-  // const deleteBox = (uuid) => {
-  //   const newList = {...blockLists};
-  //   delete newList[uuid];
-  //   setBlockLists(newList);
-  // }
-
   const toggleBoxModal = () => {
     setModalInfo('');
     setModal({
@@ -161,12 +207,12 @@ const DragArea = () => {
   }
 
   const toggleBlockModal = (box, index, confirm) => {
-    if(modal.block.show && !confirm && typeof(blockLists[box].list[index].input) === 'undefined') {
-      setBlockLists({
-        ...blockLists,
+    if(modal.block.show && !confirm && typeof(boxList[box].list[index].input) === 'undefined') {
+      setBoxList({
+        ...boxList,
         [box]: {
-          ...blockLists[box],
-          list: blockLists[box].list.filter((_, i) => i !== index)
+          ...boxList[box],
+          list: boxList[box].list.filter((_, i) => i !== index)
         }
       });
     }
@@ -184,7 +230,7 @@ const DragArea = () => {
   const pasteBlocks = async (boxId) => {
     try {
       const clipboard = JSON.parse(await navigator.clipboard.readText());
-      const list = [...blockLists[boxId].list];
+      const list = [...boxList[boxId].list];
       clipboard.blocks.forEach((c) => {
         const block = blocksJson.filter(b => b.name === c.name);
         if(!block.length) return;
@@ -196,10 +242,10 @@ const DragArea = () => {
           ...block[0],
         });
       });
-    setBlockLists({
-      ...blockLists,
+    setBoxList({
+      ...boxList,
       [boxId]: {
-        ...blockLists[boxId],
+        ...boxList[boxId],
         list,
       },
     })
@@ -210,26 +256,26 @@ const DragArea = () => {
   }
 
   const deleteBlock = (boxId, index) => {
-    setBlockLists({
-      ...blockLists,
+    setBoxList({
+      ...boxList,
       [boxId]: {
-        ...blockLists[boxId],
-        list: blockLists[boxId].list.filter((_, i) => i !== index)
+        ...boxList[boxId],
+        list: boxList[boxId].list.filter((_, i) => i !== index)
       }
     })
   }
 
   const deleteBox = (boxId) => {
-    const list = {...blockLists};
+    const list = {...boxList};
     delete list[boxId];
-    setBlockLists(list);
+    setBoxList(list);
   }
 
   const clearBox = (boxId) => {
-    setBlockLists({
-      ...blockLists,
+    setBoxList({
+      ...boxList,
       [boxId]: {
-        ...blockLists[boxId],
+        ...boxList[boxId],
         list: []
       }
     });
@@ -239,12 +285,11 @@ const DragArea = () => {
     e.preventDefault();
     if(modalInfo === '') return;
     toggleBoxModal();
-    setBlockLists({
-      ...blockLists,
+    setBoxList({
+      ...boxList,
       [uuid()]: {
         title: modalInfo,
         list: [],
-        children: {}
       }
     });
   }
@@ -253,11 +298,11 @@ const DragArea = () => {
     e.preventDefault();
     if(modalInfo === '') return;
     const { box, index } = modal.block
-    setBlockLists({
-      ...blockLists,
+    setBoxList({
+      ...boxList,
       [box]: {
-        ...blockLists[box],
-        list: blockLists[box].list.map((b, i) => i === index ? { ...b, input: modalInfo, edit: toggleBlockModal } : b)
+        ...boxList[box],
+        list: boxList[box].list.map((b, i) => i === index ? { ...b, input: modalInfo, edit: toggleBlockModal } : b)
       }
     });
     toggleBlockModal(box, index, true);
@@ -297,35 +342,34 @@ const DragArea = () => {
               Adicionar caixa
             </Button>
           </div>
-          <Droppable droppableId="BOXES" direction="vertical" type="BOX">
+          <Droppable droppableId="BOXES" direction="vertical" type="BOX" isCombineEnabled>
             {(provided, snapshot) => (
               <div style={{ width: '100%' }}>
-                  <div ref={provided.innerRef} >
-                      {Object.keys(blockLists).filter(blockId => blockId !== 'trash').map((blockId, i) => (
-                        <Draggable draggableId={blockId} index={i} key={blockId}>
-                          {(provided, snapshot) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                className={classes.block}
+                  <div ref={provided.innerRef}>
+                    {Object.keys(organizedBoxList).map((boxId, i) => (
+                      <Draggable draggableId={boxId} index={i} key={boxId}>
+                        {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                            >
+                              <Box
+                                id={boxId}
+                                key={boxId}
+                                title={boxList[boxId].title}
+                                boxList={organizedBoxList[boxId].children || {}}
+                                pasteBlocks={pasteBlocks}
+                                deleteBox={deleteBox}
+                                clearBox={clearBox}
+                                list={boxList[boxId].list}
+                                dragHandleProps={provided.dragHandleProps}
+                                deleteBlock={deleteBlock}
                               >
-                                <Box
-                                  id={blockId}
-                                  key={blockId}
-                                  title={blockLists[blockId].title}
-                                  boxes={blockLists[blockId].children}
-                                  pasteBlocks={pasteBlocks}
-                                  deleteBox={deleteBox}
-                                  clearBox={clearBox}
-                                  list={blockLists[blockId].list}
-                                  dragHandleProps={provided.dragHandleProps}
-                                >
-                                  <List list={blockLists[blockId].list} boxId={blockId} deleteBlock={deleteBlock} />
-                                </Box>
-                              </div>
+                                <List list={boxList[boxId].list} boxId={boxId} deleteBlock={deleteBlock} />
+                              </Box>
+                            </div>
                           )}
                       </Draggable>
-
                     ))}
                     {provided.placeholder}
                 </div>
