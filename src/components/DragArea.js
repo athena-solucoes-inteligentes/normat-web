@@ -47,22 +47,22 @@ const DragArea = () => {
   const organizeBoxes = useCallback(() => {
     const output = {};
     Object.keys(boxList).forEach(boxKey => {
-      let parent = output;
+      let temp = output;
       if(Array.isArray(boxList[boxKey].parent)) {
         boxList[boxKey].parent.forEach((p, i) => {
           if(i === 0) {
-            parent[p] = parent[p] || {};
-            parent = parent[p];
+            temp[p] = temp[p] || {};
+            temp = temp[p];
           } else {
-            parent.children = parent.children || {};
-            parent.children[p] = parent.children[p] || {};
-            parent = parent.children[p];
+            temp.children = temp.children || {};
+            temp.children[p] = temp.children[p] || {};
+            temp = temp.children[p];
           }
         });
-        parent.children = {...parent.children, [boxKey]: {...boxList[boxKey]}};
+        temp.children = {...temp.children, [boxKey]: {...boxList[boxKey]}};
       } else {
-        parent[boxKey] = {...boxList[boxKey]};
-        parent = parent[boxKey];
+        temp[boxKey] = {...temp[boxKey], ...boxList[boxKey]};
+        temp = temp[boxKey];
       }
     });
     setOrganizedBoxList(output)
@@ -86,9 +86,24 @@ const DragArea = () => {
     });
   }
 
+  const propagateReorder = (output, box, boxKey) => {
+    if(typeof(box.children) === 'undefined') return;
+    let previousKey = boxKey;
+    Object.keys(box.children).forEach(child => {
+      output.list = putKeyAfter(output.list, child, previousKey);
+      previousKey = child;
+      propagateReorder(output, box.children[child], child);
+    });
+  }
+
   useEffect(() => organizeBoxes(), [organizeBoxes]);
-  console.log('organized', organizedBoxList);
-  console.log('boxList', boxList);
+  useEffect(() => {
+    console.log('organized', organizedBoxList);
+    console.log('boxList', boxList);
+    console.log('organized keys', Object.keys(organizedBoxList).map(e => `${e} - ${organizedBoxList[e].title}`));
+    console.log('boxList keys', Object.keys(boxList).map(e => `${e} - ${boxList[e].title}`));
+  }, [organizedBoxList, boxList]);
+
   const onBeforeCapture = (before) => {
     const { box, index, show } = modal.block;
     if(show) toggleBlockModal(box, index);
@@ -111,14 +126,19 @@ const DragArea = () => {
               parent: Array.isArray(output[newParentBoxKey].parent)
                 ? [...output[newParentBoxKey].parent, newParentBoxKey]
                 : [newParentBoxKey],
-          }
+          };
           propagateParent(output, boxKey, box.children);
           return setBoxList(output);
         }
         if(source.droppableId === destination.droppableId) {
+          if(source.index === destination.index) return;
           if(source.droppableId === 'BOXES') {
-            const boxKeys = Object.keys(boxList);
-            setBoxList(putKeyAfter(boxList, boxKeys[source.index], boxKeys[source.index < destination.index ? destination.index : destination.index - 1]));
+            const organizedBoxListKeys = Object.keys(organizedBoxList);
+            const sourceKey = organizedBoxListKeys[source.index];
+            const destKey = organizedBoxListKeys[source.index < destination.index ? destination.index : destination.index - 1];
+            let newBoxList = { list: putKeyAfter(boxList, sourceKey, destKey) };
+            propagateReorder(newBoxList, organizedBoxList[sourceKey], sourceKey);
+            setBoxList(newBoxList.list);
           } else {
 
           }
@@ -159,6 +179,7 @@ const DragArea = () => {
           if(blocksJson[source.index].editable && destination.droppableId !== 'trash')
             toggleBlockModal(destination.droppableId, destination.index);
         } else if (source.droppableId !== 'toolbar' && destination.droppableId === source.droppableId) {
+          if(source.index === destination.index) return;
           setBoxList({
             ...boxList,
             [destination.droppableId]: {
