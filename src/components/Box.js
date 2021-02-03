@@ -70,7 +70,7 @@ const Box = ({
         )}
       </Droppable>
       {id !== 'toolbar' && id !== 'trash' && Object.keys(boxList).length > 0 && (
-        <Droppable droppableId={`${id};${title}`} direction="vertical" type="BOX">
+        <Droppable droppableId={`${id};${title}`} direction="vertical" type="BOXES">
           {(provided, snapshot) => (
             <div
               style={{ width: '100%', border: '1px solid black' }}

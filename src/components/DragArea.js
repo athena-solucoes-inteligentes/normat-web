@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { v4 as uuid } from 'uuid'
 
@@ -6,6 +6,7 @@ import Box from './Box';
 import Button from './Button';
 import List from './List';
 import Modal from './Modal';
+import api from '../services/api';
 
 import blocksJson from '../constants/blocks.json';
 import classes from './DragArea.module.css';
@@ -23,6 +24,7 @@ const DragArea = () => {
     },
   });
   const [modalInfo, setModalInfo] = useState('');
+  const ref = useRef(null);
 
   const reorder = (list, startIndex, endIndex) => {
     const result = Array.from(list);
@@ -97,12 +99,6 @@ const DragArea = () => {
   }
 
   useEffect(() => organizeBoxes(), [organizeBoxes]);
-  useEffect(() => {
-    console.log('organized', organizedBoxList);
-    console.log('boxList', boxList);
-    console.log('organized keys', Object.keys(organizedBoxList).map(e => `${e} - ${organizedBoxList[e].title}`));
-    console.log('boxList keys', Object.keys(boxList).map(e => `${e} - ${boxList[e].title}`));
-  }, [organizedBoxList, boxList]);
 
   const onBeforeCapture = (before) => {
     const { box, index, show } = modal.block;
@@ -112,7 +108,6 @@ const DragArea = () => {
   const onDragEnd = (result) => {
     setTrash(false);
     const { source, destination, combine, type } = result;
-    console.log('result', result);
     if (!destination && !combine) return;
     switch(type) {
       case 'BOX':
@@ -329,6 +324,30 @@ const DragArea = () => {
     toggleBlockModal(box, index, true);
   }
 
+  const getChildren = (box) => {
+    if(typeof(box.children) === 'undefined') return;
+    box.children = Object.values(box.children);
+    box.children.forEach(i => getChildren(i));
+  }
+
+  const buildRequest = () => {
+    const request = { boxes: JSON.parse(JSON.stringify(Object.values(organizedBoxList))) };
+    request.boxes.forEach(i => getChildren(i));
+    return request;
+  }
+
+  const processBoxes = () => {
+    const token = localStorage.getItem('token');
+    if(!token) return;
+    api.post('/', buildRequest(), {
+      params: {
+        token
+      }
+    })
+      .then(res => console.log(res.data))
+      .catch(err => console.log(err));
+  }
+
   return (
     <div className={classes.container}>
       {modal.box && (
@@ -406,6 +425,8 @@ const DragArea = () => {
             </div>
           </Box>
         </div>
+        <Button onClick={processBoxes}>Processar</Button>
+        <a ref={ref} href="/" target="_blank" style={{ display: 'none' }}>Download</a>
       </DragDropContext>
     </div>
   )
