@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { DragDropContext } from 'react-beautiful-dnd';
+import 'react-sortable-tree/style.css';
+import SortableTree, { getFlatDataFromTree, defaultGetNodeKey, removeNodeAtPath, removeNode } from 'react-sortable-tree';
 import { v4 as uuid } from 'uuid'
 
 import Box from './Box';
@@ -7,13 +9,14 @@ import Button from './Button';
 import List from './List';
 import Modal from './Modal';
 import api from '../services/api';
+import { checkNested } from '../utils'
 
 import blocksJson from '../constants/blocks.json';
 import classes from './DragArea.module.css';
 
 const DragArea = () => {
-  const [boxList, setBoxList] = useState({});
-  const [organizedBoxList, setOrganizedBoxList] = useState({});
+  const [boxList, setBoxList] = useState([]);
+  const [blockLists, setBlockLists] = useState({});
   const [trash, setTrash] = useState(false);
   const [modal, setModal] = useState({
     box: false,
@@ -34,206 +37,73 @@ const DragArea = () => {
     return result;
   };
 
-  const putKeyAfter = (object, key1, key2) => {
-    const res = {};
-    let prev = undefined;
-    for(let i of Object.keys(object)) {
-      if(key2 === prev) res[key1] = object[key1];
-      if(i !== key1) res[i] = object[i];
-      prev = i;
-    }
-    if(key2 === prev) res[key1] = object[key1];
-    return res;
-  }
-
-  const organizeBoxes = useCallback(() => {
-    const output = {};
-    Object.keys(boxList).forEach(boxKey => {
-      let temp = output;
-      if(Array.isArray(boxList[boxKey].parent)) {
-        boxList[boxKey].parent.forEach((p, i) => {
-          if(i === 0) {
-            temp[p] = temp[p] || {};
-            temp = temp[p];
-          } else {
-            temp.children = temp.children || {};
-            temp.children[p] = temp.children[p] || {};
-            temp = temp.children[p];
-          }
-        });
-        temp.children = {...temp.children, [boxKey]: {...boxList[boxKey]}};
-      } else {
-        temp[boxKey] = {...temp[boxKey], ...boxList[boxKey]};
-        temp = temp[boxKey];
-      }
-    });
-    setOrganizedBoxList(output)
-  }, [boxList]);
-
-  const getOrganizedBox = useCallback(boxKey => {
-    let parent = organizedBoxList;
-    if(Array.isArray(boxList[boxKey].parent))
-      boxList[boxKey].parent.forEach(parentKey => {
-        if(typeof(parent[parentKey]) === 'undefined') return;
-        parent = parent[parentKey];
-      });
-    return {...parent[boxKey]};
-  }, [boxList, organizedBoxList]);
-
-  const propagateParent = (list, parent, children) => {
-    if(!children) return;
-    Object.keys(children).forEach(childKey => {
-      list[childKey].parent = [...list[parent].parent, parent];
-      propagateParent(list, childKey, children[childKey].children);
-    });
-  }
-
-  const propagateReorder = (output, box, boxKey) => {
-    if(typeof(box.children) === 'undefined') return;
-    let previousKey = boxKey;
-    Object.keys(box.children).forEach(child => {
-      output.list = putKeyAfter(output.list, child, previousKey);
-      previousKey = child;
-      propagateReorder(output, box.children[child], child);
-    });
-  }
-
-  useEffect(() => organizeBoxes(), [organizeBoxes]);
-
   const onBeforeCapture = (before) => {
     const { box, index, show } = modal.block;
     if(show) toggleBlockModal(box, index);
-    if(typeof(boxList[before.draggableId]) === 'undefined') setTrash(true);
+    if(!checkNested(boxList, before.draggableId)) setTrash(true);
   }
+
   const onDragEnd = (result) => {
     setTrash(false);
-    const { source, destination, combine, type } = result;
-    if (!destination && !combine) return;
-    switch(type) {
-      case 'BOX':
-        if(!destination && combine) {
-          const boxKey = Object.keys(organizedBoxList)[source.index];
-          const newParentBoxKey = combine.draggableId;
-          let output = {...boxList};
-          const box = getOrganizedBox(boxKey);
-          output[boxKey] = {
-            ...output[boxKey],
-              parent: Array.isArray(output[newParentBoxKey].parent)
-                ? [...output[newParentBoxKey].parent, newParentBoxKey]
-                : [newParentBoxKey],
-          };
-          propagateParent(output, boxKey, box.children);
-          return setBoxList(output);
+    const { source, destination } = result;
+    if (!destination) return;
+    if (source.droppableId === 'toolbar' && destination.droppableId !== source.droppableId) {
+      if(destination.droppableId === 'trash') return;
+      const id = `${blocksJson[source.index].name}-${uuid()}`;
+      const dest = [
+        ...blockLists[destination.droppableId],
+        {
+          ...blocksJson[source.index],
+          id
         }
-        if(source.droppableId === destination.droppableId) {
-          if(source.index === destination.index) return;
-          if(source.droppableId === 'BOXES') {
-            const organizedBoxListKeys = Object.keys(organizedBoxList);
-            const sourceKey = organizedBoxListKeys[source.index];
-            const destKey = organizedBoxListKeys[source.index < destination.index ? destination.index : destination.index - 1];
-            let newBoxList = { list: putKeyAfter(boxList, sourceKey, destKey) };
-            propagateReorder(newBoxList, organizedBoxList[sourceKey], sourceKey);
-            setBoxList(newBoxList.list);
-          } else {
-
-          }
-        } else {
-          if(source.droppableId === 'BOXES') {
-            const boxKey = Object.keys(boxList)[source.index];
-            const newParentBoxKey = destination.droppableId.split(';')[0];
-            setBoxList({
-              ...boxList,
-              [boxKey]: {
-                ...boxList[boxKey],
-                parent: Array.isArray(boxList[boxKey].parent) ? [...boxList[boxKey].parent, newParentBoxKey] : [newParentBoxKey]
-              }
-            });
-          }
-        }
-
-      break;
-
-      case 'BLOCK':
-        if (source.droppableId === 'toolbar' && destination.droppableId !== source.droppableId) {
-          if(destination.droppableId === 'trash') return;
-          const id = `${blocksJson[source.index].name}-${uuid()}`;
-          const dest = [
-            ...boxList[destination.droppableId].list,
-            {
-              ...blocksJson[source.index],
-              id
-            }
-          ];
-          setBoxList({
-            ...boxList,
-            [destination.droppableId]: {
-              ...boxList[destination.droppableId],
-              list: reorder(dest, dest.length - 1, destination.index)
-            },
-          });
-          if(blocksJson[source.index].editable && destination.droppableId !== 'trash')
-            toggleBlockModal(destination.droppableId, destination.index);
-        } else if (source.droppableId !== 'toolbar' && destination.droppableId === source.droppableId) {
-          if(source.index === destination.index) return;
-          setBoxList({
-            ...boxList,
-            [destination.droppableId]: {
-              ...boxList[destination.droppableId],
-              list: reorder(boxList[destination.droppableId].list, source.index, destination.index),
-            },
-          });
-        } else if (source.droppableId !== 'toolbar' && destination.droppableId !== 'toolbar' && destination.droppableId !== source.droppableId) {
-          if(destination.droppableId === 'trash')
-            return setBoxList({
-              ...boxList,
-              [source.droppableId]: {
-                ...boxList[source.droppableId],
-                list: boxList[source.droppableId].list.filter((_, index) => index !== source.index),
-              },
-            });
-          const dest = [
-            ...boxList[destination.droppableId].list,
-            boxList[source.droppableId].list[source.index],
-          ];
-          setBoxList({
-            ...boxList,
-            [destination.droppableId]: {
-              ...boxList[destination.droppableId],
-              list: reorder(dest, dest.length - 1, destination.index),
-            },
-            [source.droppableId]: {
-              ...boxList[source.droppableId],
-              list: boxList[source.droppableId].list.filter((_, index) => index !== source.index),
-            },
-          });
-        }
-      break;
-
-      default:
-      break;
+      ];
+      setBlockLists({
+        ...blockLists,
+        [destination.droppableId]: reorder(dest, dest.length - 1, destination.index)
+      });
+      if(blocksJson[source.index].editable && destination.droppableId !== 'trash')
+        toggleBlockModal(destination.droppableId, destination.index);
+    } else if (source.droppableId !== 'toolbar' && destination.droppableId === source.droppableId) {
+      if(source.index === destination.index) return;
+      setBlockLists({
+        ...blockLists,
+        [destination.droppableId]: reorder(blockLists[destination.droppableId], source.index, destination.index)
+      });
+    } else if (source.droppableId !== 'toolbar' && destination.droppableId !== source.droppableId) {
+      if(destination.droppableId === 'trash')
+        return setBlockLists({
+          ...blockLists,
+          [source.droppableId]: blockLists[source.droppableId].filter((_, index) => index !== source.index)
+        });
+      const dest = [
+        ...blockLists[destination.droppableId],
+        blockLists[source.droppableId][source.index]
+      ];
+      setBlockLists({
+        ...blockLists,
+        [destination.droppableId]: reorder(dest, dest.length - 1, destination.index),
+        [source.droppableId]: blockLists[source.droppableId].filter((_, index) => index !== source.index)
+      });
     }
   }
 
-  const toggleBoxModal = () => {
+  const toggleBoxModal = useCallback(() => {
     setModalInfo('');
     setModal({
       ...modal,
       box: !modal.box
     });
-  }
+  }, [modal])
 
-  const toggleBlockModal = (box, index, confirm) => {
-    if(modal.block.show && !confirm && typeof(boxList[box].list[index].input) === 'undefined') {
-      setBoxList({
-        ...boxList,
-        [box]: {
-          ...boxList[box],
-          list: boxList[box].list.filter((_, i) => i !== index)
-        }
+  const toggleBlockModal = useCallback((box, index, confirm) => {
+    if(modal.block.show && !confirm && !checkNested(blockLists, box, index, 'input')) {
+      setBlockLists({
+        ...blockLists,
+        [box]: blockLists[box].filter((_, i) => i !== index)
       });
     }
     setModalInfo('');
-    setModal((prevState) => ({
+    setModal(prevState => ({
       ...modal,
       block: {
         show: !prevState.block.show,
@@ -241,105 +111,124 @@ const DragArea = () => {
         index
       }
     }));
-  }
+  }, [modal, blockLists])
 
-  const pasteBlocks = async (boxId) => {
-    try {
-      const clipboard = JSON.parse(await navigator.clipboard.readText());
-      const list = [...boxList[boxId].list];
-      clipboard.blocks.forEach((c) => {
-        const block = blocksJson.filter(b => b.name === c.name);
-        if(!block.length) return;
-        list.push({
-          id: `${c.name}-${uuid()}`,
-          name: c.name,
-          input: block[0].editable ? c.input : undefined,
-          edit: block[0].editable ? toggleBlockModal : undefined,
-          ...block[0],
+  const pasteBlocks = useCallback(async (boxId) => {
+    navigator.clipboard.readText()
+      .then(text => {
+        setBlockLists(blocks => {
+          try {
+            const clipboard = JSON.parse(text);
+            const list = [...blocks[boxId]];
+            clipboard.list.forEach((c) => {
+              const block = blocksJson.filter(b => b.name === c.name);
+              if(!block.length) return;
+              list.push({
+                id: `${c.name}-${uuid()}`,
+                name: c.name,
+                input: block[0].editable ? c.input : undefined,
+                edit: block[0].editable ? toggleBlockModal : undefined,
+                ...block[0],
+              });
+            });
+            return {
+            ...blocks,
+            [boxId]: list,
+            }
+          } catch(e) {
+            console.log(e);
+            alert('Erro ao copiar bloco(s)!');
+            return blocks;
+          }
         });
       });
-    setBoxList({
-      ...boxList,
-      [boxId]: {
-        ...boxList[boxId],
-        list,
-      },
-    })
-    } catch(e) {
-      console.log(e);
-      alert('Erro ao copiar bloco(s)!');
-    }
-  }
+  }, [toggleBlockModal])
 
   const deleteBlock = (boxId, index) => {
-    setBoxList({
-      ...boxList,
-      [boxId]: {
-        ...boxList[boxId],
-        list: boxList[boxId].list.filter((_, i) => i !== index)
-      }
-    })
+    setBlockLists((blocks) => ({
+      ...blocks,
+      [boxId]: blocks[boxId].filter((_, i) => i !== index),
+    }));
   }
 
   const deleteBox = (boxId) => {
-    const list = {...boxList};
-    delete list[boxId];
-    setBoxList(list);
+    setBoxList((boxes) => {
+      const node = getFlatDataFromTree({
+        treeData: boxes,
+        getNodeKey: defaultGetNodeKey,
+        ignoreCollapsed: false
+      }).find((n) => n.node.id === boxId);
+      setBlockLists((blocks) => {
+        delete blocks[boxId];
+        return blocks;
+      });
+      return removeNodeAtPath({
+        treeData: boxes,
+        getNodeKey: defaultGetNodeKey,
+        path: node.path,
+        ignoreCollapsed: false
+      });
+    });
   }
 
   const clearBox = (boxId) => {
-    setBoxList({
-      ...boxList,
-      [boxId]: {
-        ...boxList[boxId],
-        list: []
-      }
-    });
+    setBlockLists((blocks) => ({
+      ...blocks,
+      [boxId]: [],
+    }));
   }
 
-  const addBox = (e) => {
+  const addBox = useCallback((e) => {
     e.preventDefault();
     if(modalInfo === '') return;
     toggleBoxModal();
-    setBoxList({
-      ...boxList,
-      [uuid()]: {
-        title: modalInfo,
-        list: [],
-      }
+    const id = uuid();
+    setBlockLists({
+      ...blockLists,
+      [id]: [],
     });
+    setBoxList([
+      ...boxList,
+      {
+        id,
+        name: modalInfo,
+        list: blockLists[id],
+        title: modalInfo
+      }
+    ]);
+  }, [boxList, blockLists, modalInfo, toggleBoxModal])
+
+  const updateChildrenOnList = (box) => {
+    return {
+      ...box,
+      list: blockLists[box.id],
+      children: box.children ? box.children.map(children => updateChildrenOnList(children)) : undefined,
+    }
   }
+
+  useEffect(() => {
+    setBoxList(b => b.map(box => updateChildrenOnList(box)));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blockLists]);
 
   const editBlock = (e) => {
     e.preventDefault();
     if(modalInfo === '') return;
     const { box, index } = modal.block
-    setBoxList({
-      ...boxList,
-      [box]: {
-        ...boxList[box],
-        list: boxList[box].list.map((b, i) => i === index ? { ...b, input: modalInfo, edit: toggleBlockModal } : b)
-      }
+    setBlockLists({
+      ...blockLists,
+      [box]: blockLists[box].map((b, i) => i === index ? { ...b, input: modalInfo, edit: toggleBlockModal } : b)
     });
     toggleBlockModal(box, index, true);
-  }
-
-  const getChildren = (box) => {
-    if(typeof(box.children) === 'undefined') return;
-    box.children = Object.values(box.children);
-    box.children.forEach(i => getChildren(i));
-  }
-
-  const buildRequest = () => {
-    const request = { boxes: JSON.parse(JSON.stringify(Object.values(organizedBoxList))) };
-    request.boxes.forEach(i => getChildren(i));
-    return request;
   }
 
   const processBoxes = () => {
     const token = localStorage.getItem('token');
     if(!token) return;
-    api.post('/', buildRequest(), {
+    console.log(boxList);
+    api.post('/', {
+      boxes: boxList
+    }, {
       params: {
         token
       }
@@ -353,7 +242,7 @@ const DragArea = () => {
       {modal.box && (
         <Modal closeModal={toggleBoxModal} title="Adicionar caixa">
           <form onSubmit={addBox}>
-            <input type="text" value={modalInfo} onChange={(e) => setModalInfo(e.target.value)} />
+            <input type="text" placeholder="Nome da caixa" value={modalInfo} onChange={(e) => setModalInfo(e.target.value)} />
             <Button type="submit">Adicionar</Button>
           </form>
         </Modal>
@@ -361,14 +250,14 @@ const DragArea = () => {
       {modal.block.show && (
         <Modal closeModal={() => toggleBlockModal(modal.block.box, modal.block.index)} title="Adicionar bloco">
           <form onSubmit={editBlock}>
-            <input type="text" value={modalInfo} onChange={(e) => setModalInfo(e.target.value)} />
+            <input type="text" placeholder="Argumento do bloco" value={modalInfo} onChange={(e) => setModalInfo(e.target.value)} />
             <Button type="submit">Adicionar</Button>
           </form>
         </Modal>
       )}
       <DragDropContext onDragEnd={onDragEnd} onBeforeCapture={onBeforeCapture}>
         <div className={classes.boxes} style={{ background: 'transparent', width: '100%' }}>
-          <Box id="toolbar" disableDrop>
+          <Box id="toolbar">
             <List list={blocksJson} toolbar />
           </Box>
         </div>
@@ -382,40 +271,28 @@ const DragArea = () => {
               Adicionar caixa
             </Button>
           </div>
-          <Droppable droppableId="BOXES" direction="vertical" type="BOX" isCombineEnabled>
-            {(provided, snapshot) => (
-              <div style={{ width: '100%' }}>
-                  <div ref={provided.innerRef}>
-                    {Object.keys(organizedBoxList).map((boxId, i) => (
-                      <Draggable draggableId={boxId} index={i} key={boxId}>
-                        {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                            >
-                              <Box
-                                id={boxId}
-                                key={boxId}
-                                title={boxList[boxId].title}
-                                boxList={organizedBoxList[boxId].children || {}}
-                                pasteBlocks={pasteBlocks}
-                                deleteBox={deleteBox}
-                                clearBox={clearBox}
-                                list={boxList[boxId].list}
-                                dragHandleProps={provided.dragHandleProps}
-                                deleteBlock={deleteBlock}
-                              >
-                                <List list={boxList[boxId].list} boxId={boxId} deleteBlock={deleteBlock} />
-                              </Box>
-                            </div>
-                          )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                </div>
-              </div>
-            )}
-          </Droppable>
+          <div className={classes.treeContainer}>
+            <SortableTree
+              dndType="BOX"
+              treeData={boxList}
+              onChange={setBoxList}
+              rowHeight={140}
+              nodeContentRenderer={(props) => (
+                  <Box
+                    title={props.node.title}
+                    pasteBlocks={pasteBlocks}
+                    deleteBox={deleteBox}
+                    clearBox={clearBox}
+                    deleteBlock={deleteBlock}
+                    list={props.node.list}
+                    id={props.node.id}
+                    {...props}
+                  >
+                    <List list={props.node.list} boxId={props.node.id} deleteBlock={deleteBlock}/>
+                  </Box>
+                )}
+            />
+          </div>
           <Box id="trash" customClass={!trash ? classes.hidden : null}>
             <div className={[classes.trash, !trash ? classes.hidden : null].join(' ')}>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 636.01 848.31" style={{ fill: '#010101', width: 48, height: 48 }} >

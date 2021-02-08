@@ -1,5 +1,5 @@
 import React from 'react';
-
+import { checkNested } from '../utils.js'
 import classes from './ContextMenu.module.css';
 
 const ContextMenu = ({ x, y, show, handleClick, list }) => (
@@ -8,11 +8,14 @@ const ContextMenu = ({ x, y, show, handleClick, list }) => (
     style={{ left: x, top: y }}
     onMouseDown={(e) => e.stopPropagation()}
     onContextMenu={(e) => e.preventDefault()}
-    onClick={handleClick}
   >
     {list && list.map((item) => {
-      if(typeof(item.title) !== 'undefined')
-        return <li key={item.title} onClick={item.click}>{item.title}</li>;
+      if(checkNested(item, 'title'))
+        return <li key={item.title} onMouseDown={(e) => {
+          e.stopPropagation();
+          item.click();
+          handleClick();
+        }}>{item.title}</li>;
       return null;
     })}
   </ul>

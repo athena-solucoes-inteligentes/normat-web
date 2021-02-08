@@ -3,7 +3,7 @@ import React from 'react';
 import Block from './Block';
 
 const List = React.memo(({ list, toolbar, boxId, deleteBlock }) => {
-  return list.map((item, index) => (
+  return list && list.map((item, index) => (
     <Block
       key={toolbar ? item.name : item.id}
       id={toolbar ? item.name : item.id}

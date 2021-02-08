@@ -3,5 +3,34 @@
   position: absolute;
   z-index: 1001;
   left: 40%;
-  top: 30%;
+  top: 40%;
+  border-radius: 5px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  align-self: center;
+  -webkit-box-shadow: 0px 5px 24px 0px rgba(0,0,0,0.2);
+  -moz-box-shadow: 0px 5px 24px 0px rgba(0,0,0,0.2);
+  box-shadow: 0px 5px 24px 0px rgba(0,0,0,0.2);
+  border: 1px solid #999;
+}
+
+.separator {
+  background: #ddd;
+  height: 1px;
+  margin: 5px 0;
+}
+
+.container header {
+  font-size: 16pt;
+}
+
+.container input {
+  margin: 5px 0;
+  font-size: 12px;
+  width: 100%;
+}
+
+.container button {
+  margin: 5px 0 0 0;
 }
