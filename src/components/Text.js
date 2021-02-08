@@ -12,7 +12,12 @@ const Text = () => {
 
   const onDrop = useCallback((acceptedFiles) => setFile(acceptedFiles[0]), []);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
+  const { getRootProps, getInputProps } = useDropzone({
+    onDrop,
+    accept: 'application/pdf',
+    multiple: false,
+    maxFiles: 1
+  });
 
   const sendFile = useCallback(() => {
     const data = new FormData();
@@ -43,11 +48,17 @@ const Text = () => {
 
   return (
     <div className={classes.container}>
-      <div {...getRootProps()} style={{ height: 200, width: '100%' }}>
+      <div {...getRootProps()} style={{
+        justifyContent: file ? 'flex-start' : 'center',
+        alignItems: file ? 'flex-start' : 'center'
+      }}>
         <input {...getInputProps()} />
-        <div onClick={(e) => e.stopPropagation()}>
-          {text.split(/\n/).map((t, i) => <p key={i}>{t}</p>)}
-        </div>
+        {!file && <div className={classes.drag} />}
+        {file && (
+          <div onClick={(e) => e.stopPropagation()}>
+            {text.split(/\n/).map((t, i) => <p key={i}>{t}</p>)}
+          </div>
+        )}
       </div>
     </div>
   );

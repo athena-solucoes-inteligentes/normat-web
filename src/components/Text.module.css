@@ -1,4 +1,29 @@
 .container {
   width: 40%;
   height: 100%;
+  padding: 8px;
+  outline: none;
+}
+
+.container > div {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  outline: none;
+}
+
+.drag {
+  width: 256px;
+  height: 256px;
+  fill: white;
+  mask-image: url('../assets/drag.svg');
+  background-color: #27A9F8;
+  background-position: center;
+  mask-position: left;
+  mask-size: inherit;
+  background-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  outline: none;
+  cursor: pointer;
 }

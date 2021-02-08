@@ -17,7 +17,8 @@ const Box = ({
   clearBox,
   deleteBox,
   dragHandleProps,
-  connectDragSource
+  connectDragSource,
+  connectDragPreview,
 }) => {
   const dotRef = useRef(null);
   const { /* showContextMenu, */ setList, handleContextMenu } = useContext(MenuContext);
@@ -67,43 +68,45 @@ const Box = ({
   //   showContextMenu(dotRef.current.offsetLeft, dotRef.current.offsetTop + dotRef.current.offsetWidth / 2);
   // }
 
-  return (
-    <Droppable droppableId={id} direction="horizontal" isDropDisabled={disableDrop} type="BLOCK">
-      {(provided, snapshot) => (
-        <div className={classes.container} style={{padding: disableDrop ? '8px 0' : null}} >
-          {!disableDrop && title && connectDragSource((
-            <div className={classes.title} {...dragHandleProps}>
-              <div>
-                <Circle size={16} color="#fff" margin="0 5px" />
-              </div>
-              <p>{title}</p>
-              <div ref={dotRef} className={classes.dots} onClick={(e) => openContextMenu(e, true)}>
-                <Circle size={4} color="#fff" margin={2} />
-                <Circle size={4} color="#fff" margin={2} />
-                <Circle size={4} color="#fff" margin={2} />
-              </div>
-            </div>
-          ), { dropEffect: 'move' })}
-          <div onContextMenu={openContextMenu} style={{width: 'inherit', display: 'flex', justifyContent: 'center'}}>
-            <div
-              ref={provided.innerRef}
-              className={[
-                classes.box,
-                disableDrop || !title ? classes.nodrop : '',
-                customClass
-              ].join(' ')}
-              style={{
-                borderRadius: disableDrop || !title ? 10 : null,
-                width: disableDrop ? '100%' : null,
-                justifyContent: disableDrop ? 'center' : null,
-              }}
-            >
-              {children}
-              {provided.placeholder}
-            </div>
+  const getBox = (provided) => (
+    <div className={classes.container} style={{padding: disableDrop ? '8px 0' : null}} >
+      {!disableDrop && title && connectDragSource((
+        <div className={classes.title} {...dragHandleProps}>
+          <div>
+            <Circle size={16} color="#fff" margin="0 5px" />
+          </div>
+          <p>{title}</p>
+          <div ref={dotRef} className={classes.dots} onClick={(e) => openContextMenu(e, true)}>
+            <Circle size={4} color="#fff" margin={2} />
+            <Circle size={4} color="#fff" margin={2} />
+            <Circle size={4} color="#fff" margin={2} />
           </div>
         </div>
-      )}
+      ), { dropEffect: 'move' })}
+      <div onContextMenu={openContextMenu} style={{width: 'inherit', display: 'flex', justifyContent: 'center'}}>
+        <div
+          ref={provided.innerRef}
+          className={[
+            classes.box,
+            disableDrop || !title ? classes.nodrop : '',
+            customClass
+          ].join(' ')}
+          style={{
+            borderRadius: disableDrop || !title ? 10 : null,
+            width: disableDrop ? '100%' : null,
+            justifyContent: disableDrop ? 'center' : null,
+          }}
+        >
+          {children}
+          {provided.placeholder}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <Droppable droppableId={id} direction="horizontal" isDropDisabled={disableDrop} type="BLOCK">
+      {(provided, snapshot) => connectDragPreview ? connectDragPreview(getBox(provided)) : getBox(provided)}
     </Droppable>
   );
 }

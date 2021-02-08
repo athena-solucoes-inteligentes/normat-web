@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { DragDropContext } from 'react-beautiful-dnd';
 import 'react-sortable-tree/style.css';
-import SortableTree, { getFlatDataFromTree, defaultGetNodeKey, removeNodeAtPath, removeNode } from 'react-sortable-tree';
+import SortableTree, { getFlatDataFromTree, defaultGetNodeKey, removeNodeAtPath } from 'react-sortable-tree';
 import { v4 as uuid } from 'uuid'
 
 import Box from './Box';
@@ -47,6 +47,7 @@ const DragArea = () => {
     setTrash(false);
     const { source, destination } = result;
     if (!destination) return;
+    if(destination.droppableId === 'toolbar') return;
     if (source.droppableId === 'toolbar' && destination.droppableId !== source.droppableId) {
       if(destination.droppableId === 'trash') return;
       const id = `${blocksJson[source.index].name}-${uuid()}`;
@@ -259,6 +260,7 @@ const DragArea = () => {
   }
 
   const processBoxes = () => {
+    if(boxList.length === 0) return;
     const cleanList = boxList.map(box => cleanUpBox(box));
     const token = localStorage.getItem('token');
     if(!token) return;
@@ -269,7 +271,10 @@ const DragArea = () => {
         token
       }
     })
-      .then(res => console.log(res.data))
+      .then(res => {
+        ref.current.href = `http://${res.data}`;
+        ref.current.click();
+      })
       .catch(err => console.log(err));
   }
 
@@ -323,6 +328,7 @@ const DragArea = () => {
                     list={props.node.list}
                     id={props.node.id}
                     {...props}
+                    connectDragPreview={props.connectDragPreview}
                   >
                     <List list={props.node.list} boxId={props.node.id} deleteBlock={deleteBlock}/>
                   </Box>
