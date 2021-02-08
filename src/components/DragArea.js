@@ -222,12 +222,48 @@ const DragArea = () => {
     toggleBlockModal(box, index, true);
   }
 
+  const cleanUpBlock = block => {
+    const cleanBlock = {};
+    Object.keys(block).forEach(key => {
+      switch(key) {
+        case 'name':
+        case 'input':
+          cleanBlock[key] = block[key];
+          break;
+        default:
+      };
+    });
+    return cleanBlock;
+  }
+
+  const cleanUpBox =  box=> {
+    const cleanBox = {};
+    Object.keys(box).forEach(key => {
+      switch(key) {
+        case 'list':
+          if(box.list)
+            cleanBox.list = box.list.map(block => cleanUpBlock(block));
+          break;
+        case 'children':
+          if(box.children)
+            cleanBox.children = box.children.map(box => cleanUpBox(box));
+          break;
+        case 'title':
+          cleanBox[key] = box[key];
+          break;
+        default:
+      }
+    });
+
+    return cleanBox;
+  }
+
   const processBoxes = () => {
+    const cleanList = boxList.map(box => cleanUpBox(box));
     const token = localStorage.getItem('token');
     if(!token) return;
-    console.log(boxList);
     api.post('/', {
-      boxes: boxList
+      boxes: cleanList
     }, {
       params: {
         token
