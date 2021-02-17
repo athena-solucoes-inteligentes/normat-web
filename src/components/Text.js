@@ -56,7 +56,7 @@ const Text = () => {
         {!file && <div className={classes.drag} />}
         {file && (
           <div onClick={(e) => e.stopPropagation()}>
-            {text.split(/\n/).map((t, i) => <p key={i}>{t}</p>)}
+            {text.split(/\n/).map((t, i) => <p key={i} className={classes.text} >{t}</p>)}
           </div>
         )}
       </div>

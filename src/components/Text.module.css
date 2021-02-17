@@ -27,3 +27,14 @@
   outline: none;
   cursor: pointer;
 }
+
+.text {
+  min-height: 10px;
+}
+
+.text::after {
+  pointer-events: none;
+  content: "\21B5";
+  position: absolute;
+  opacity: 0.3;
+}
